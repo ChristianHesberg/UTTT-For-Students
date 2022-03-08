@@ -4,9 +4,8 @@ import dk.easv.bll.field.IField;
 import dk.easv.bll.game.GameState;
 import dk.easv.bll.game.IGameState;
 import dk.easv.bll.move.IMove;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+
+import java.util.*;
 
 public class ExampleSneakyBot implements IBot{
     final int moveTimeMs = 1000;
@@ -31,15 +30,25 @@ public class ExampleSneakyBot implements IBot{
     private IMove calculateWinningMove(IGameState state, int maxTimeMs){
         long time = System.currentTimeMillis();
         Random rand = new Random();
-        int count = 0;
+        HashMap<IMove, Integer> potentialWinningMoves = new HashMap<>();
+        IMove finalWinningMove = null;
+        int highestValue = 0;
+        int currentPlayer = -1;
+
+
+
+
         while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
             GameSimulator simulator = createSimulator(state);
             IGameState gs = simulator.getCurrentState();
             List<IMove> moves = gs.getField().getAvailableMoves();
             IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
             IMove winnerMove = randomMovePlayer;
+            currentPlayer = simulator.currentPlayer;
 
-            while (simulator.getGameOver()==GameOverState.Active){ // Game not ended
+
+
+            while (simulator.getGameOver()==GameOverState.Active){
                 simulator.updateGame(randomMovePlayer);
 
                 // Opponent plays randomly
@@ -52,18 +61,24 @@ public class ExampleSneakyBot implements IBot{
                     moves = gs.getField().getAvailableMoves();
                     randomMovePlayer = moves.get(rand.nextInt(moves.size()));
                 }
+
             }
 
-            if (simulator.getGameOver()==GameOverState.Win){
-                //System.out.println("Found a win, :)");
-                return winnerMove; // Hint you could maybe save multiple games and pick the best? Now it just returns at a possible victory
+            if (simulator.getGameOver()==GameOverState.Win) {
+                if (simulator.currentPlayer != currentPlayer) {
+                    potentialWinningMoves.putIfAbsent(winnerMove, 0);
+                    int value = potentialWinningMoves.get(winnerMove);
+                    potentialWinningMoves.replace(winnerMove, value + 1);
+                    if (value + 1 > highestValue) {
+                        highestValue = value + 1;
+                        finalWinningMove = winnerMove;
+                    }
+                }
             }
-            count++;
         }
         //System.out.println("Did not win, just doing random :¨(");
-        List<IMove> moves = state.getField().getAvailableMoves();
-        IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
-        return randomMovePlayer; // just play randomly if solution not found
+        return finalWinningMove;
+// just play randomly if solution not found
     }
 
     /*
@@ -77,6 +92,7 @@ public class ExampleSneakyBot implements IBot{
         changed accordingly, making the code redundant.
 
      */
+
 
     @Override
     public String getBotName() {
@@ -294,5 +310,35 @@ public class ExampleSneakyBot implements IBot{
             }
         }
     }
+
+    /*class PotentialMove
+    {
+        private int successValue;
+        private IMove potentialMove;
+
+        public PotentialMove(IMove potentialMove, int successValue)
+        {
+            this.potentialMove = potentialMove;
+            this.successValue = successValue;
+        }
+
+        public int getSuccessValue() {
+            return successValue;
+        }
+
+        public void setSuccessValue(int successValue) {
+            this.successValue = successValue;
+        }
+
+        public IMove getPotentialMove() {
+            return potentialMove;
+        }
+
+        public void setPotentialMove(IMove potentialMove) {
+            this.potentialMove = potentialMove;
+        }
+    }
+
+     */
 
 }
