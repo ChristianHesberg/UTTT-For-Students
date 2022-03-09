@@ -31,18 +31,40 @@ public class ExampleSneakyBot implements IBot{
     {
         return (nTotalWins/ nNodeMoves) + (1.41 * Math.sqrt(Math.log(nTotalMoves)/nNodeMoves));
     }
+
+    public PotentialMove calculateHighestUCT(ArrayList<PotentialMove> potentialMoves, double totalMoves)
+    {
+        double highestUCTvalue = -1;
+        PotentialMove highestUCTmove = null;
+        for(PotentialMove potMove: potentialMoves)
+        {
+            if(potMove.getnNodeMoves()==0)
+            {
+                return potMove;
+            }
+            double uct = calculateUCT(potMove.getnNodeMoves(), potMove.getnTotalWins(), totalMoves);
+
+            if(uct>highestUCTvalue)
+            {
+                highestUCTvalue = uct;
+                highestUCTmove = potMove;
+            }
+        }
+        return highestUCTmove;
+    }
+
     // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
     private IMove calculateWinningMove(IGameState state, int maxTimeMs){
         long time = System.currentTimeMillis();
         Random rand = new Random();
         int currentPlayer = -1;
-
         ArrayList<PotentialMove> potentialMoves = new ArrayList<>();
-        List<IMove> moves = state.getField().getAvailableMoves();
-        boolean firstMove = true;
+        List<IMove> initialMoves = state.getField().getAvailableMoves();
+        double totalMoves = 0;
 
 
-        for(IMove move: moves)
+
+        for(IMove move: initialMoves)
         {
             potentialMoves.add(new PotentialMove(move, 0, 0));
         }
@@ -50,36 +72,19 @@ public class ExampleSneakyBot implements IBot{
         while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
             GameSimulator simulator = createSimulator(state);
             IGameState gs = simulator.getCurrentState();
+            List<IMove> moves = gs.getField().getAvailableMoves();
             IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
             currentPlayer = simulator.currentPlayer;
-            double highestUCTvalue = -1;
-            double totalMoves = 0;
-            PotentialMove highestUCTmove = null;
+            PotentialMove highestUCTmove;
+            boolean firstMove = true;
 
-
-            for(PotentialMove potMove: potentialMoves)
-            {
-                double uct = calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, totalMoves);
-                if (Double.isNaN(uct))
-                {
-                    highestUCTmove = potMove;
-                }
-                if(uct>highestUCTvalue)
-                {
-                    highestUCTvalue = uct;
-                    highestUCTmove = potMove;
-                }
-            }
+            highestUCTmove = calculateHighestUCT(potentialMoves, totalMoves);
 
 
             while (simulator.getGameOver()==GameOverState.Active){
 
                 if (firstMove) {
-                    System.out.println(highestUCTmove);
-                    highestUCTmove.setnNodeMoves(highestUCTmove.getnNodeMoves() +1);
-                    System.out.println(highestUCTmove.nNodeMoves);
-                    totalMoves++;
-                    System.out.println(totalMoves);
+                    highestUCTmove.setnNodeMoves(highestUCTmove.getnNodeMoves()+1);
                     simulator.updateGame(highestUCTmove.getPotentialMove());
                     firstMove = false;
                 }
@@ -87,7 +92,6 @@ public class ExampleSneakyBot implements IBot{
                 {
                     simulator.updateGame(randomMovePlayer);
                 }
-
 
                 // Opponent plays randomly
                 if (simulator.getGameOver()==GameOverState.Active){ // game still going
@@ -106,6 +110,7 @@ public class ExampleSneakyBot implements IBot{
                 if (simulator.currentPlayer != currentPlayer) {
                     highestUCTmove.setnTotalWins(highestUCTmove.getnTotalWins()+1);
                 }
+                totalMoves++;
             }
         }
         double mostNodeVisits = 0;
@@ -113,13 +118,16 @@ public class ExampleSneakyBot implements IBot{
         for(PotentialMove potentialMove: potentialMoves)
         {
             double nMoves = potentialMove.getnNodeMoves();
+            //System.out.println(nMoves);
+            //System.out.println(potentialMove.getnTotalWins());
             if(nMoves > mostNodeVisits)
             {
                 mostNodeVisits = nMoves;
                 returnedMove = potentialMove.getPotentialMove();
             }
         }
-        //System.out.println("Did not win, just doing random :¨(");
+        System.out.println(totalMoves);
+        System.out.println(returnedMove);
         return returnedMove;
 // just play randomly if solution not found
     }

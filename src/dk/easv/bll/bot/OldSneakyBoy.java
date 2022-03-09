@@ -76,9 +76,7 @@ public class OldSneakyBoy implements IBot{
                 }
             }
         }
-        //System.out.println("Did not win, just doing random :¨(");
         return finalWinningMove;
-// just play randomly if solution not found
     }
 
     /*
