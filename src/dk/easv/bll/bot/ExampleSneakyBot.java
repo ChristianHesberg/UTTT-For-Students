@@ -36,9 +36,11 @@ public class ExampleSneakyBot implements IBot{
         long time = System.currentTimeMillis();
         Random rand = new Random();
         int currentPlayer = -1;
-        double totalMoves = 1;
+
         ArrayList<PotentialMove> potentialMoves = new ArrayList<>();
         List<IMove> moves = state.getField().getAvailableMoves();
+        boolean firstMove = true;
+
 
         for(IMove move: moves)
         {
@@ -51,8 +53,9 @@ public class ExampleSneakyBot implements IBot{
             IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
             currentPlayer = simulator.currentPlayer;
             double highestUCTvalue = -1;
+            double totalMoves = 0;
             PotentialMove highestUCTmove = null;
-            boolean firstMove = true;
+
 
             for(PotentialMove potMove: potentialMoves)
             {
@@ -72,8 +75,11 @@ public class ExampleSneakyBot implements IBot{
             while (simulator.getGameOver()==GameOverState.Active){
 
                 if (firstMove) {
+                    System.out.println(highestUCTmove);
                     highestUCTmove.setnNodeMoves(highestUCTmove.getnNodeMoves() +1);
+                    System.out.println(highestUCTmove.nNodeMoves);
                     totalMoves++;
+                    System.out.println(totalMoves);
                     simulator.updateGame(highestUCTmove.getPotentialMove());
                     firstMove = false;
                 }
