@@ -33,7 +33,7 @@ public class OldSneakyBoy implements IBot{
         HashMap<IMove, Integer> potentialWinningMoves = new HashMap<>();
         IMove finalWinningMove = null;
         int highestValue = 0;
-        int currentPlayer = -1;
+        int count = 0;
 
 
 
@@ -44,7 +44,10 @@ public class OldSneakyBoy implements IBot{
             List<IMove> moves = gs.getField().getAvailableMoves();
             IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
             IMove winnerMove = randomMovePlayer;
-            currentPlayer = simulator.currentPlayer;
+            int usPlayer = simulator.currentPlayer;
+            System.out.println(usPlayer);
+
+
 
 
 
@@ -65,7 +68,7 @@ public class OldSneakyBoy implements IBot{
             }
 
             if (simulator.getGameOver()==GameOverState.Win) {
-                if (simulator.currentPlayer != currentPlayer) {
+                if (simulator.currentPlayer != usPlayer) {
                     potentialWinningMoves.putIfAbsent(winnerMove, 0);
                     int value = potentialWinningMoves.get(winnerMove);
                     potentialWinningMoves.replace(winnerMove, value + 1);
@@ -74,8 +77,10 @@ public class OldSneakyBoy implements IBot{
                         finalWinningMove = winnerMove;
                     }
                 }
+                count++;
             }
         }
+        System.out.println(count);
         return finalWinningMove;
     }
 
