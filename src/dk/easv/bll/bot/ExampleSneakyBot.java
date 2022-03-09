@@ -36,9 +36,10 @@ public class ExampleSneakyBot implements IBot{
         long time = System.currentTimeMillis();
         Random rand = new Random();
         int currentPlayer = -1;
-        double totalMoves = 0;
+        double totalMoves = 1;
         ArrayList<PotentialMove> potentialMoves = new ArrayList<>();
         List<IMove> moves = state.getField().getAvailableMoves();
+
         for(IMove move: moves)
         {
             potentialMoves.add(new PotentialMove(move, 0, 0));
@@ -51,19 +52,30 @@ public class ExampleSneakyBot implements IBot{
             currentPlayer = simulator.currentPlayer;
             double highestUCTvalue = -1;
             PotentialMove highestUCTmove = null;
+            boolean firstMove = true;
+
+            for(PotentialMove potMove: potentialMoves)
+            {
+                double uct = calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, totalMoves);
+                if (Double.isNaN(uct))
+                {
+                    highestUCTmove = potMove;
+                }
+                if(uct>highestUCTvalue)
+                {
+                    highestUCTvalue = uct;
+                    highestUCTmove = potMove;
+                }
+            }
+
 
             while (simulator.getGameOver()==GameOverState.Active){
-                for(PotentialMove potMove: potentialMoves)
-                {
-                    double uct = calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, totalMoves);
-                    if(uct>highestUCTvalue || Double.isNaN(uct))
-                    {
-                        highestUCTvalue = uct;
-                        highestUCTmove = potMove;
-                    }
-                }
-                if (simulator.getCurrentState().getMoveNumber() == 0 || simulator.getCurrentState().getMoveNumber() ==1) {
+
+                if (firstMove) {
+                    highestUCTmove.setnNodeMoves(highestUCTmove.getnNodeMoves() +1);
+                    totalMoves++;
                     simulator.updateGame(highestUCTmove.getPotentialMove());
+                    firstMove = false;
                 }
                 else
                 {
@@ -87,13 +99,6 @@ public class ExampleSneakyBot implements IBot{
             if (simulator.getGameOver()==GameOverState.Win) {
                 if (simulator.currentPlayer != currentPlayer) {
                     highestUCTmove.setnTotalWins(highestUCTmove.getnTotalWins()+1);
-                    highestUCTmove.setnNodeMoves(highestUCTmove.getnNodeMoves() +1);
-                    totalMoves++;
-                }
-                else
-                {
-                    highestUCTmove.setnNodeMoves(highestUCTmove.getnNodeMoves() +1);
-                    totalMoves++;
                 }
             }
         }
@@ -101,8 +106,10 @@ public class ExampleSneakyBot implements IBot{
         IMove returnedMove = null;
         for(PotentialMove potentialMove: potentialMoves)
         {
-            if(potentialMove.getnNodeMoves() > mostNodeVisits)
+            double nMoves = potentialMove.getnNodeMoves();
+            if(nMoves > mostNodeVisits)
             {
+                mostNodeVisits = nMoves;
                 returnedMove = potentialMove.getPotentialMove();
             }
         }
@@ -366,10 +373,6 @@ public class ExampleSneakyBot implements IBot{
 
         public IMove getPotentialMove() {
             return potentialMove;
-        }
-
-        public void setPotentialMove(IMove potentialMove) {
-            this.potentialMove = potentialMove;
         }
 
         public double getnTotalWins() {
