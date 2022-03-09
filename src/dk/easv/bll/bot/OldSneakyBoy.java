@@ -8,10 +8,10 @@ import dk.easv.bll.move.IMove;
 import java.util.*;
 
 public class OldSneakyBoy implements IBot{
-    final int moveTimeMs = 1000;
+    //final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
 
-    private GameSimulator createSimulator(IGameState state) {
+     GameSimulator createSimulator(IGameState state) {
         GameSimulator simulator = new GameSimulator(new GameState());
         simulator.setGameOver(GameOverState.Active);
         simulator.setCurrentPlayer(state.getMoveNumber() % 2);
@@ -22,21 +22,57 @@ public class OldSneakyBoy implements IBot{
         return simulator;
     }
 
+
+
     @Override
     public IMove doMove(IGameState state) {
-        return calculateWinningMove(state, moveTimeMs);
+        MySpicyRunnable runnable1 = new MySpicyRunnable(state);
+        MySpicyRunnable runnable2 = new MySpicyRunnable(state);
+        MySpicyRunnable runnable3 = new MySpicyRunnable(state);
+
+        Thread thread1 = new Thread(runnable1);
+        Thread thread2 = new Thread(runnable2);
+        Thread thread3 = new Thread(runnable3);
+
+        thread1.start();
+        thread2.start();
+        thread3.start();
+        try {
+            thread1.join();
+            thread2.join();
+            thread3.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return mushMaps(runnable1.getHashMap(), runnable2.getHashMap(), runnable3.getHashMap());
     }
-    // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
-    private IMove calculateWinningMove(IGameState state, int maxTimeMs){
+
+    public IMove mushMaps(HashMap<IMove, Integer> threadHashMap1, HashMap<IMove, Integer> threadHashMap2, HashMap<IMove, Integer> threadHashMap3)
+    {
+        HashMap<IMove, Integer> superMap = new HashMap<>();
+        int highestValue = 0;
+        IMove bestMove = null;
+        for(IMove move: threadHashMap1.keySet())
+        {
+            superMap.putIfAbsent(move, threadHashMap1.get(move)+threadHashMap2.get(move) + threadHashMap3.get(move));
+        }
+        for(IMove move: superMap.keySet())
+        {
+            int value = superMap.get(move);
+            if(value>highestValue)
+            {
+                highestValue = value;
+                bestMove = move;
+            }
+        }
+        return bestMove;
+    }
+
+    public HashMap<IMove, Integer> calculateWinningMove(IGameState state, int maxTimeMs){
         long time = System.currentTimeMillis();
         Random rand = new Random();
         HashMap<IMove, Integer> potentialWinningMoves = new HashMap<>();
-        IMove finalWinningMove = null;
-        int highestValue = 0;
-        int count = 0;
-
-
-
 
         while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
             GameSimulator simulator = createSimulator(state);
@@ -45,11 +81,6 @@ public class OldSneakyBoy implements IBot{
             IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
             IMove winnerMove = randomMovePlayer;
             int usPlayer = simulator.currentPlayer;
-            System.out.println(usPlayer);
-
-
-
-
 
             while (simulator.getGameOver()==GameOverState.Active){
                 simulator.updateGame(randomMovePlayer);
@@ -64,7 +95,6 @@ public class OldSneakyBoy implements IBot{
                     moves = gs.getField().getAvailableMoves();
                     randomMovePlayer = moves.get(rand.nextInt(moves.size()));
                 }
-
             }
 
             if (simulator.getGameOver()==GameOverState.Win) {
@@ -72,17 +102,13 @@ public class OldSneakyBoy implements IBot{
                     potentialWinningMoves.putIfAbsent(winnerMove, 0);
                     int value = potentialWinningMoves.get(winnerMove);
                     potentialWinningMoves.replace(winnerMove, value + 1);
-                    if (value + 1 > highestValue) {
-                        highestValue = value + 1;
-                        finalWinningMove = winnerMove;
-                    }
                 }
-                count++;
             }
         }
-        System.out.println(count);
-        return finalWinningMove;
+        return potentialWinningMoves;
     }
+    // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
+
 
     /*
         The code below is a simulator for simulation of gameplay. This is needed for AI.
@@ -314,34 +340,27 @@ public class OldSneakyBoy implements IBot{
         }
     }
 
-    /*class PotentialMove
-    {
-        private int successValue;
-        private IMove potentialMove;
 
-        public PotentialMove(IMove potentialMove, int successValue)
+    class MySpicyRunnable implements Runnable {
+        final int moveTimeMs = 1000;
+        IGameState gameState;
+        HashMap<IMove, Integer> hashMap;
+
+        public MySpicyRunnable(IGameState state)
         {
-            this.potentialMove = potentialMove;
-            this.successValue = successValue;
+            this.gameState = state;
         }
 
-        public int getSuccessValue() {
-            return successValue;
+        @Override
+        public void run() {
+            hashMap = calculateWinningMove(gameState, moveTimeMs);
         }
 
-        public void setSuccessValue(int successValue) {
-            this.successValue = successValue;
-        }
-
-        public IMove getPotentialMove() {
-            return potentialMove;
-        }
-
-        public void setPotentialMove(IMove potentialMove) {
-            this.potentialMove = potentialMove;
+        public HashMap<IMove, Integer> getHashMap()
+        {
+            return hashMap;
         }
     }
 
-     */
 
-}
+    }
