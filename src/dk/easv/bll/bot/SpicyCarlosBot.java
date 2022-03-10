@@ -10,11 +10,15 @@ import java.util.*;
 public class SpicyCarlosBot implements IBot{
     final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
-    private static double totalMoves = 0;
-    
-    public static void addTotalMove()
+    private double totalMoves = 0;
+
+    public double getTotalMoves() {
+        return totalMoves;
+    }
+
+    public void addTotalMove()
     {
-        SpicyCarlosBot.totalMoves++;
+        totalMoves++;
     }
 
     @Override
@@ -22,7 +26,7 @@ public class SpicyCarlosBot implements IBot{
 
         List<IMove> moves = state.getField().getAvailableMoves();
         PotentialMove[] potentialMoves = new PotentialMove[moves.size()];
-        SpicyCarlosBot.totalMoves = 0;
+        //double totalMoves = getTotalMoves();
         double highestValue = 0;
         IMove bestMove = null;
 
@@ -363,7 +367,7 @@ public class SpicyCarlosBot implements IBot{
                 if (potMove.nNodeMoves == 0) {
                     return potMove;
                 }
-                double uct = calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, SpicyCarlosBot.totalMoves);
+                double uct = calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, getTotalMoves());
 
                 if (uct > highestUCTvalue) {
                     highestUCTvalue = uct;
