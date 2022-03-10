@@ -345,7 +345,8 @@ public class ShotgunBot implements IBot {
         public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
             this.gameState = state;
             this.potentialMoves = potentialMoves;
-            this.moveTimeMs = state.getTimePerMove();
+            this.moveTimeMs = 100;
+            //this.moveTimeMs = state.getTimePerMove();
         }
 
         @Override
