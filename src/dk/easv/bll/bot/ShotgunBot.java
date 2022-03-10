@@ -35,6 +35,11 @@ public class ShotgunBot implements IBot {
             potentialMoves[i] = new PotentialMove(moves.get(i), 0);
         }
 
+        if(state.getMoveNumber()==0)
+        {
+            return new Move(4,4);
+        }
+
         MySpicyRunnable runnable1 = new MySpicyRunnable(state, potentialMoves);
         MySpicyRunnable runnable2 = new MySpicyRunnable(state, potentialMoves);
         MySpicyRunnable runnable3 = new MySpicyRunnable(state, potentialMoves);

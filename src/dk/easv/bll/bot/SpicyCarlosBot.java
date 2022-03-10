@@ -365,8 +365,15 @@ public class SpicyCarlosBot implements IBot{
                 IGameState gs = simulator.getCurrentState();
                 List<IMove> moves;
                 PotentialMove highestUCTmove = calculateHighestUCT(potentialMoves);
-                IMove randomMovePlayer = highestUCTmove.move;
                 int currentPlayer = simulator.currentPlayer;
+                IMove randomMovePlayer = highestUCTmove.move;
+
+                if(randomMovePlayer==null)
+                {
+                    List<IMove> randomMoves = gs.getField().getAvailableMoves();
+                    randomMovePlayer = randomMoves.get(randomMoves.size());
+                }
+
 
                 while (simulator.getGameOver() == GameOverState.Active) {
                     simulator.updateGame(randomMovePlayer);
