@@ -26,7 +26,6 @@ public class SpicyCarlosBot implements IBot{
 
         List<IMove> moves = state.getField().getAvailableMoves();
         PotentialMove[] potentialMoves = new PotentialMove[moves.size()];
-        //double totalMoves = getTotalMoves();
         double highestValue = 0;
         IMove bestMove = null;
 
@@ -62,39 +61,7 @@ public class SpicyCarlosBot implements IBot{
             }
         }
         return bestMove;
-        
-        //calculateWinningMove(state, moveTimeMs);
     }
-
-
-       /* double mostNodeVisits = 0;
-        IMove returnedMove = null;
-        for(PotentialMove potentialMove: potentialMoves)
-        {
-            double nMoves = potentialMove.getnNodeMoves();
-            if(nMoves > mostNodeVisits)
-            {
-                mostNodeVisits = nMoves;
-                returnedMove = potentialMove.getPotentialMove();
-            }
-        }
-        return returnedMove;
-        
-        */
-
-
-    /*
-        The code below is a simulator for simulation of gameplay. This is needed for AI.
-
-        It is put here to make the Bot independent of the GameManager and its subclasses/enums
-
-        Now this class is only dependent on a few interfaces: IMove, IField, and IGameState
-
-        You could say it is self-contained. The drawback is that if the game rules change, the simulator must be
-        changed accordingly, making the code redundant.
-
-     */
-
 
     @Override
     public String getBotName() {
