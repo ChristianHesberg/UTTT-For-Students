@@ -7,11 +7,11 @@ import dk.easv.bll.move.IMove;
 
 import java.util.*;
 
-public class OldSneakyBoy implements IBot{
+public class OldSneakyBoy implements IBot {
     //final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
 
-     GameSimulator createSimulator(IGameState state) {
+    GameSimulator createSimulator(IGameState state) {
         GameSimulator simulator = new GameSimulator(new GameState());
         simulator.setGameOver(GameOverState.Active);
         simulator.setCurrentPlayer(state.getMoveNumber() % 2);
@@ -23,16 +23,21 @@ public class OldSneakyBoy implements IBot{
     }
 
 
-
     @Override
     public IMove doMove(IGameState state) {
-         int highestValue = 0;
-         IMove bestMove = null;
-         List<IMove> moves = state.getField().getAvailableMoves();
+        int highestValue = 0;
+        IMove bestMove = null;
+        List<IMove> moves = state.getField().getAvailableMoves();
+        PotentialMove[] potentialMoves = new PotentialMove[moves.size()];
 
-        MySpicyRunnable runnable1 = new MySpicyRunnable(state);
-        MySpicyRunnable runnable2 = new MySpicyRunnable(state);
-        MySpicyRunnable runnable3 = new MySpicyRunnable(state);
+        for(int i = 0; i < potentialMoves.length; i++)
+        {
+            potentialMoves[i] = new PotentialMove(moves.get(i), 0);
+        }
+
+        MySpicyRunnable runnable1 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable2 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable3 = new MySpicyRunnable(state, potentialMoves);
 
         Thread thread1 = new Thread(runnable1);
         Thread thread2 = new Thread(runnable2);
@@ -48,45 +53,29 @@ public class OldSneakyBoy implements IBot{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        int [] superArray = combineArrays(runnable1.getArrays(), runnable2.getArrays(), runnable3.getArrays());
-        for(int i=0; i < superArray.length; i++)
+        for(PotentialMove potMove : potentialMoves)
         {
-            if (superArray[i] > highestValue)
+            if(potMove.value> highestValue)
             {
-                highestValue = superArray[i];
-                bestMove = moves.get(i);
+                highestValue = potMove.value;
+                bestMove = potMove.move;
             }
         }
         return bestMove;
     }
 
-    public int[] combineArrays(int[] threadArray1, int[] threadArray2, int[] threadArray3)
-    {
-        int length = threadArray1.length;
-        int[] superArray = new int[length];
-        for(int i=0; i<length; i++)
-        {
-            superArray[i] = threadArray1[i] + threadArray2[i] + threadArray3[i];
-        }
-        return superArray;
-    }
-
-    public int[] calculateWinningMove(IGameState state, int maxTimeMs){
+    public void calculateWinningMove(IGameState state, int maxTimeMs, PotentialMove[] potentialMoves) {
         long time = System.currentTimeMillis();
         Random rand = new Random();
-        List<IMove> initialMoves = state.getField().getAvailableMoves();
-        int [] values = new int[initialMoves.size()];
 
-            while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
-                GameSimulator simulator = createSimulator(state);
-                IGameState gs = simulator.getCurrentState();
-                List<IMove> moves;
-                //IMove winnerMove = randomMovePlayer;
-                int usPlayer = simulator.currentPlayer;
+        while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
+            GameSimulator simulator = createSimulator(state);
+            IGameState gs = simulator.getCurrentState();
+            List<IMove> moves;
+            int usPlayer = simulator.currentPlayer;
+            int index = rand.nextInt(potentialMoves.length);
+            IMove randomMovePlayer = potentialMoves[index].move;
 
-                for(int i= 0; i<initialMoves.size(); i++) {
-                    IMove randomMovePlayer = initialMoves.get(i);
                 while (simulator.getGameOver() == GameOverState.Active) {
                     simulator.updateGame(randomMovePlayer);
 
@@ -104,12 +93,10 @@ public class OldSneakyBoy implements IBot{
 
                 if (simulator.getGameOver() == GameOverState.Win) {
                     if (simulator.currentPlayer != usPlayer) {
-                        values[i]++;
+                        potentialMoves[index].value++;
                     }
                 }
-            }
         }
-        return values;
     }
     // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
 
@@ -346,25 +333,34 @@ public class OldSneakyBoy implements IBot{
 
 
     class MySpicyRunnable implements Runnable {
-        final int moveTimeMs = 1000;
+        final int moveTimeMs;
         IGameState gameState;
-        int[] valueArray;
+        PotentialMove[] potentialMoves;
 
-        public MySpicyRunnable(IGameState state)
-        {
+        public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
             this.gameState = state;
+            this.potentialMoves = potentialMoves;
+            this.moveTimeMs = state.getTimePerMove();
         }
 
         @Override
         public void run() {
-            valueArray = calculateWinningMove(gameState, moveTimeMs);
+            //System.out.println("new Thread");
+            calculateWinningMove(gameState, moveTimeMs, potentialMoves);
         }
+    }
 
-        public int[] getArrays()
+    class PotentialMove
+    {
+        IMove move;
+        int value;
+
+        public PotentialMove(IMove move, int value)
         {
-            return valueArray;
+            this.move = move;
+            this.value = value;
         }
     }
 
+}
 
-    }
