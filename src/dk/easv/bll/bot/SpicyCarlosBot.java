@@ -30,7 +30,7 @@ public class SpicyCarlosBot implements IBot{
 
         List<IMove> moves = state.getField().getAvailableMoves();
         PotentialMove[] potentialMoves = new PotentialMove[moves.size()];
-        double highestValue = 0;
+        double highestValue = -1;
         IMove bestMove = null;
 
         for(int i = 0; i < potentialMoves.length; i++)
@@ -369,7 +369,14 @@ public class SpicyCarlosBot implements IBot{
                     highestUCTmove = potMove;
                 }
             }
+            if(highestUCTmove!=null) {
                 return highestUCTmove;
+            }
+            else {
+                Random r = new Random();
+                System.out.println("returning random highUCTmove");
+                return potentialMoves[r.nextInt(potentialMoves.length)];
+            }
         }
 
         // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
@@ -383,7 +390,7 @@ public class SpicyCarlosBot implements IBot{
                 List<IMove> moves;
                 PotentialMove highestUCTmove = calculateHighestUCT(potentialMoves);
                 int currentPlayer = simulator.currentPlayer;
-                IMove randomMovePlayer = highestUCTmove.move!=null?highestUCTmove.move:gs.getField().getAvailableMoves().get(rand.nextInt(gs.getField().getAvailableMoves().size()));
+                IMove randomMovePlayer = highestUCTmove.move;//!=null?highestUCTmove.move:gs.getField().getAvailableMoves().get(rand.nextInt(gs.getField().getAvailableMoves().size()));
 
                 while (simulator.getGameOver() == GameOverState.Active) {
                     simulator.updateGame(randomMovePlayer);
