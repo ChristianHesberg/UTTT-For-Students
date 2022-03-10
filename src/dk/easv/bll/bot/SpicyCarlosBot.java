@@ -367,7 +367,7 @@ public class SpicyCarlosBot implements IBot{
                 List<IMove> moves;
                 PotentialMove highestUCTmove = calculateHighestUCT(potentialMoves);
                 int currentPlayer = simulator.currentPlayer;
-                IMove randomMovePlayer = highestUCTmove.move;
+                IMove randomMovePlayer = highestUCTmove.move!=null?highestUCTmove.move:gs.getField().getAvailableMoves().get(rand.nextInt(gs.getField().getAvailableMoves().size()));
 
                 if(randomMovePlayer==null)
                 {
