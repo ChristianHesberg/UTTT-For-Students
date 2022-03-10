@@ -26,6 +26,10 @@ public class OldSneakyBoy implements IBot{
 
     @Override
     public IMove doMove(IGameState state) {
+         int highestValue = 0;
+         IMove bestMove = null;
+         List<IMove> moves = state.getField().getAvailableMoves();
+
         MySpicyRunnable runnable1 = new MySpicyRunnable(state);
         MySpicyRunnable runnable2 = new MySpicyRunnable(state);
         MySpicyRunnable runnable3 = new MySpicyRunnable(state);
@@ -45,67 +49,67 @@ public class OldSneakyBoy implements IBot{
             e.printStackTrace();
         }
 
-        return mushMaps(runnable1.getHashMap(), runnable2.getHashMap(), runnable3.getHashMap());
-    }
-
-    public IMove mushMaps(HashMap<IMove, Integer> threadHashMap1, HashMap<IMove, Integer> threadHashMap2, HashMap<IMove, Integer> threadHashMap3)
-    {
-        HashMap<IMove, Integer> superMap = new HashMap<>();
-        int highestValue = 0;
-        IMove bestMove = null;
-        for(IMove move: threadHashMap1.keySet())
+        int [] superArray = combineArrays(runnable1.getArrays(), runnable2.getArrays(), runnable3.getArrays());
+        for(int i=0; i < superArray.length; i++)
         {
-            superMap.putIfAbsent(move, threadHashMap1.get(move)+threadHashMap2.get(move) + threadHashMap3.get(move));
-        }
-        for(IMove move: superMap.keySet())
-        {
-            int value = superMap.get(move);
-            if(value>highestValue)
+            if (superArray[i] > highestValue)
             {
-                highestValue = value;
-                bestMove = move;
+                highestValue = superArray[i];
+                bestMove = moves.get(i);
             }
         }
         return bestMove;
     }
 
-    public HashMap<IMove, Integer> calculateWinningMove(IGameState state, int maxTimeMs){
+    public int[] combineArrays(int[] threadArray1, int[] threadArray2, int[] threadArray3)
+    {
+        int length = threadArray1.length;
+        int[] superArray = new int[length];
+        for(int i=0; i<length; i++)
+        {
+            superArray[i] = threadArray1[i] + threadArray2[i] + threadArray3[i];
+        }
+        return superArray;
+    }
+
+    public int[] calculateWinningMove(IGameState state, int maxTimeMs){
         long time = System.currentTimeMillis();
         Random rand = new Random();
-        HashMap<IMove, Integer> potentialWinningMoves = new HashMap<>();
+        List<IMove> initialMoves = state.getField().getAvailableMoves();
+        int [] values = new int[initialMoves.size()];
 
-        while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
-            GameSimulator simulator = createSimulator(state);
-            IGameState gs = simulator.getCurrentState();
-            List<IMove> moves = gs.getField().getAvailableMoves();
-            IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
-            IMove winnerMove = randomMovePlayer;
-            int usPlayer = simulator.currentPlayer;
+            while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
+                GameSimulator simulator = createSimulator(state);
+                IGameState gs = simulator.getCurrentState();
+                List<IMove> moves;
+                //IMove winnerMove = randomMovePlayer;
+                int usPlayer = simulator.currentPlayer;
 
-            while (simulator.getGameOver()==GameOverState.Active){
-                simulator.updateGame(randomMovePlayer);
+                for(int i= 0; i<initialMoves.size(); i++) {
+                    IMove randomMovePlayer = initialMoves.get(i);
+                while (simulator.getGameOver() == GameOverState.Active) {
+                    simulator.updateGame(randomMovePlayer);
 
-                // Opponent plays randomly
-                if (simulator.getGameOver()==GameOverState.Active){ // game still going
-                    moves = gs.getField().getAvailableMoves();
-                    IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
-                    simulator.updateGame(randomMoveOpponent);
+                    // Opponent plays randomly
+                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
+                        moves = gs.getField().getAvailableMoves();
+                        IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
+                        simulator.updateGame(randomMoveOpponent);
+                    }
+                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
+                        moves = gs.getField().getAvailableMoves();
+                        randomMovePlayer = moves.get(rand.nextInt(moves.size()));
+                    }
                 }
-                if (simulator.getGameOver()==GameOverState.Active){ // game still going
-                    moves = gs.getField().getAvailableMoves();
-                    randomMovePlayer = moves.get(rand.nextInt(moves.size()));
-                }
-            }
 
-            if (simulator.getGameOver()==GameOverState.Win) {
-                if (simulator.currentPlayer != usPlayer) {
-                    potentialWinningMoves.putIfAbsent(winnerMove, 0);
-                    int value = potentialWinningMoves.get(winnerMove);
-                    potentialWinningMoves.replace(winnerMove, value + 1);
+                if (simulator.getGameOver() == GameOverState.Win) {
+                    if (simulator.currentPlayer != usPlayer) {
+                        values[i]++;
+                    }
                 }
             }
         }
-        return potentialWinningMoves;
+        return values;
     }
     // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
 
@@ -344,7 +348,7 @@ public class OldSneakyBoy implements IBot{
     class MySpicyRunnable implements Runnable {
         final int moveTimeMs = 1000;
         IGameState gameState;
-        HashMap<IMove, Integer> hashMap;
+        int[] valueArray;
 
         public MySpicyRunnable(IGameState state)
         {
@@ -353,12 +357,12 @@ public class OldSneakyBoy implements IBot{
 
         @Override
         public void run() {
-            hashMap = calculateWinningMove(gameState, moveTimeMs);
+            valueArray = calculateWinningMove(gameState, moveTimeMs);
         }
 
-        public HashMap<IMove, Integer> getHashMap()
+        public int[] getArrays()
         {
-            return hashMap;
+            return valueArray;
         }
     }
 
