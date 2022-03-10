@@ -7,32 +7,28 @@ import dk.easv.bll.move.IMove;
 
 import java.util.*;
 
-public class OldSneakyBoy implements IBot {
-    //final int moveTimeMs = 1000;
+public class SpicyCarlosBot implements IBot{
+    final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
-
-    GameSimulator createSimulator(IGameState state) {
-        GameSimulator simulator = new GameSimulator(new GameState());
-        simulator.setGameOver(GameOverState.Active);
-        simulator.setCurrentPlayer(state.getMoveNumber() % 2);
-        simulator.getCurrentState().setRoundNumber(state.getRoundNumber());
-        simulator.getCurrentState().setMoveNumber(state.getMoveNumber());
-        simulator.getCurrentState().getField().setBoard(state.getField().getBoard());
-        simulator.getCurrentState().getField().setMacroboard(state.getField().getMacroboard());
-        return simulator;
+    private static double totalMoves = 0;
+    
+    public static void addTotalMove()
+    {
+        SpicyCarlosBot.totalMoves++;
     }
-
 
     @Override
     public IMove doMove(IGameState state) {
-        int highestValue = 0;
-        IMove bestMove = null;
+
         List<IMove> moves = state.getField().getAvailableMoves();
         PotentialMove[] potentialMoves = new PotentialMove[moves.size()];
+        SpicyCarlosBot.totalMoves = 0;
+        double highestValue = 0;
+        IMove bestMove = null;
 
         for(int i = 0; i < potentialMoves.length; i++)
         {
-            potentialMoves[i] = new PotentialMove(moves.get(i), 0);
+            potentialMoves[i] = new PotentialMove(moves.get(i), 0, 0);
         }
 
         MySpicyRunnable runnable1 = new MySpicyRunnable(state, potentialMoves);
@@ -55,50 +51,32 @@ public class OldSneakyBoy implements IBot {
         }
         for(PotentialMove potMove : potentialMoves)
         {
-            if(potMove.value> highestValue)
+            if(potMove.nNodeMoves > highestValue)
             {
-                highestValue = potMove.value;
+                highestValue = potMove.nNodeMoves;
                 bestMove = potMove.move;
             }
         }
         return bestMove;
+        
+        //calculateWinningMove(state, moveTimeMs);
     }
 
-    public void calculateWinningMove(IGameState state, int maxTimeMs, PotentialMove[] potentialMoves) {
-        long time = System.currentTimeMillis();
-        Random rand = new Random();
 
-        while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
-            GameSimulator simulator = createSimulator(state);
-            IGameState gs = simulator.getCurrentState();
-            List<IMove> moves;
-            int usPlayer = simulator.currentPlayer;
-            int index = rand.nextInt(potentialMoves.length);
-            IMove randomMovePlayer = potentialMoves[index].move;
-
-                while (simulator.getGameOver() == GameOverState.Active) {
-                    simulator.updateGame(randomMovePlayer);
-
-                    // Opponent plays randomly
-                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
-                        moves = gs.getField().getAvailableMoves();
-                        IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
-                        simulator.updateGame(randomMoveOpponent);
-                    }
-                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
-                        moves = gs.getField().getAvailableMoves();
-                        randomMovePlayer = moves.get(rand.nextInt(moves.size()));
-                    }
-                }
-
-                if (simulator.getGameOver() == GameOverState.Win) {
-                    if (simulator.currentPlayer != usPlayer) {
-                        potentialMoves[index].value++;
-                    }
-                }
+       /* double mostNodeVisits = 0;
+        IMove returnedMove = null;
+        for(PotentialMove potentialMove: potentialMoves)
+        {
+            double nMoves = potentialMove.getnNodeMoves();
+            if(nMoves > mostNodeVisits)
+            {
+                mostNodeVisits = nMoves;
+                returnedMove = potentialMove.getPotentialMove();
+            }
         }
-    }
-    // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
+        return returnedMove;
+        
+        */
 
 
     /*
@@ -161,11 +139,13 @@ public class OldSneakyBoy implements IBot {
         public int hashCode() {
             return Objects.hash(x, y);
         }
+
+
     }
 
     class GameSimulator {
         private final IGameState currentState;
-        private int currentPlayer = 0; //player0 == 0 && player1 == 1
+        int currentPlayer = 0; //player0 == 0 && player1 == 1
         private volatile GameOverState gameOver = GameOverState.Active;
 
         public void setGameOver(GameOverState state) {
@@ -331,36 +311,113 @@ public class OldSneakyBoy implements IBot {
         }
     }
 
+    class PotentialMove
+    {
+        double nNodeMoves;
+        double nTotalWins;
+        IMove move;
+
+        public PotentialMove(IMove move, double nNodeMoves, double nTotalWins)
+        {
+            this.move = move;
+            this.nTotalWins = nTotalWins;
+            this.nNodeMoves = nNodeMoves;
+        }
+    }
 
     class MySpicyRunnable implements Runnable {
         final int moveTimeMs;
         IGameState gameState;
-        PotentialMove[] potentialMoves;
+        PotentialMove[] moves;
 
         public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
             this.gameState = state;
-            this.potentialMoves = potentialMoves;
+            this.moves = potentialMoves;
             this.moveTimeMs = state.getTimePerMove();
         }
 
         @Override
         public void run() {
-            //System.out.println("new Thread");
-            calculateWinningMove(gameState, moveTimeMs, potentialMoves);
+            calculateWinningMove(gameState, moveTimeMs, moves);
+        }
+
+        public double calculateUCT(double nNodeMoves, double nTotalWins, double nTotalMoves) {
+            return (nTotalWins / nNodeMoves) + (1.41 * Math.sqrt(Math.log(nTotalMoves) / nNodeMoves));
+        }
+
+        public void updateUCTWin(PotentialMove move) {
+            move.nNodeMoves++;
+            move.nTotalWins++;
+            addTotalMove();
+        }
+
+        public void updateUCTLoss(PotentialMove move) {
+            move.nNodeMoves++;
+            addTotalMove();
+        }
+
+        public PotentialMove calculateHighestUCT(PotentialMove[] potentialMoves) {
+            double highestUCTvalue = -1;
+            PotentialMove highestUCTmove = null;
+            for (PotentialMove potMove : potentialMoves) {
+                if (potMove.nNodeMoves == 0) {
+                    return potMove;
+                }
+                double uct = calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, SpicyCarlosBot.totalMoves);
+
+                if (uct > highestUCTvalue) {
+                    highestUCTvalue = uct;
+                    highestUCTmove = potMove;
+                }
+            }
+            return highestUCTmove;
+        }
+
+        // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
+        private void calculateWinningMove(IGameState state, int maxTimeMs, PotentialMove[] potentialMoves) {
+            long time = System.currentTimeMillis();
+            Random rand = new Random();
+
+            while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
+                GameSimulator simulator = createSimulator(state);
+                IGameState gs = simulator.getCurrentState();
+                List<IMove> moves;
+                PotentialMove highestUCTmove = calculateHighestUCT(potentialMoves);
+                IMove randomMovePlayer = highestUCTmove.move;
+                int currentPlayer = simulator.currentPlayer;
+
+                while (simulator.getGameOver() == GameOverState.Active) {
+                    simulator.updateGame(randomMovePlayer);
+
+                    // Opponent plays randomly
+                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
+                        moves = gs.getField().getAvailableMoves();
+                        IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
+                        simulator.updateGame(randomMoveOpponent);
+                    }
+                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
+                        moves = gs.getField().getAvailableMoves();
+                        randomMovePlayer = moves.get(rand.nextInt(moves.size()));
+                    }
+                }
+                if (simulator.getGameOver() == GameOverState.Win) {
+                    if (simulator.currentPlayer != currentPlayer) {
+                        updateUCTWin(highestUCTmove);
+                    }
+                    updateUCTLoss(highestUCTmove);
+                }
+            }
+        }
+
+        private GameSimulator createSimulator(IGameState state) {
+            GameSimulator simulator = new GameSimulator(new GameState());
+            simulator.setGameOver(GameOverState.Active);
+            simulator.setCurrentPlayer(state.getMoveNumber() % 2);
+            simulator.getCurrentState().setRoundNumber(state.getRoundNumber());
+            simulator.getCurrentState().setMoveNumber(state.getMoveNumber());
+            simulator.getCurrentState().getField().setBoard(state.getField().getBoard());
+            simulator.getCurrentState().getField().setMacroboard(state.getField().getMacroboard());
+            return simulator;
         }
     }
-
-    class PotentialMove
-    {
-        IMove move;
-        int value;
-
-        public PotentialMove(IMove move, int value)
-        {
-            this.move = move;
-            this.value = value;
-        }
-    }
-
 }
-

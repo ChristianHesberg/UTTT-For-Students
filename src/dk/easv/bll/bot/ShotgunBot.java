@@ -7,11 +7,11 @@ import dk.easv.bll.move.IMove;
 
 import java.util.*;
 
-public class ExampleSneakyBot implements IBot{
-    final int moveTimeMs = 1000;
+public class ShotgunBot implements IBot {
+    //final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
 
-    private GameSimulator createSimulator(IGameState state) {
+    GameSimulator createSimulator(IGameState state) {
         GameSimulator simulator = new GameSimulator(new GameState());
         simulator.setGameOver(GameOverState.Active);
         simulator.setCurrentPlayer(state.getMoveNumber() % 2);
@@ -22,107 +22,84 @@ public class ExampleSneakyBot implements IBot{
         return simulator;
     }
 
+
     @Override
     public IMove doMove(IGameState state) {
-        return calculateWinningMove(state, moveTimeMs);
-    }
+        int highestValue = 0;
+        IMove bestMove = null;
+        List<IMove> moves = state.getField().getAvailableMoves();
+        PotentialMove[] potentialMoves = new PotentialMove[moves.size()];
 
-    public double calculateUCT(double nNodeMoves, double nTotalWins, double nTotalMoves)
-    {
-        return (nTotalWins/ nNodeMoves) + (1.41 * Math.sqrt(Math.log(nTotalMoves)/nNodeMoves));
-    }
-
-    public PotentialMove calculateHighestUCT(ArrayList<PotentialMove> potentialMoves, double totalMoves)
-    {
-        double highestUCTvalue = -1;
-        PotentialMove highestUCTmove = null;
-        for(PotentialMove potMove: potentialMoves)
+        for(int i = 0; i < potentialMoves.length; i++)
         {
-            if(potMove.getnNodeMoves()==0)
-            {
-                return potMove;
-            }
-            double uct = calculateUCT(potMove.getnNodeMoves(), potMove.getnTotalWins(), totalMoves);
+            potentialMoves[i] = new PotentialMove(moves.get(i), 0);
+        }
 
-            if(uct>highestUCTvalue)
+        MySpicyRunnable runnable1 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable2 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable3 = new MySpicyRunnable(state, potentialMoves);
+
+        Thread thread1 = new Thread(runnable1);
+        Thread thread2 = new Thread(runnable2);
+        Thread thread3 = new Thread(runnable3);
+
+        thread1.start();
+        thread2.start();
+        thread3.start();
+        try {
+            thread1.join();
+            thread2.join();
+            thread3.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        for(PotentialMove potMove : potentialMoves)
+        {
+            if(potMove.value> highestValue)
             {
-                highestUCTvalue = uct;
-                highestUCTmove = potMove;
+                highestValue = potMove.value;
+                bestMove = potMove.move;
             }
         }
-        return highestUCTmove;
+        return bestMove;
     }
 
-    // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
-    private IMove calculateWinningMove(IGameState state, int maxTimeMs){
+    public void calculateWinningMove(IGameState state, int maxTimeMs, PotentialMove[] potentialMoves) {
         long time = System.currentTimeMillis();
         Random rand = new Random();
-        ArrayList<PotentialMove> potentialMoves = new ArrayList<>();
-        List<IMove> initialMoves = state.getField().getAvailableMoves();
-        double totalMoves = 0;
-
-        for(IMove move: initialMoves)
-        {
-            potentialMoves.add(new PotentialMove(move, 0, 0));
-        }
 
         while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
             GameSimulator simulator = createSimulator(state);
             IGameState gs = simulator.getCurrentState();
-            List<IMove> moves = gs.getField().getAvailableMoves();
-            IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
-            int currentPlayer = simulator.currentPlayer;
-            PotentialMove highestUCTmove;
-            boolean firstMove = true;
+            List<IMove> moves;
+            int usPlayer = simulator.currentPlayer;
+            int index = rand.nextInt(potentialMoves.length);
+            IMove randomMovePlayer = potentialMoves[index].move;
 
-            highestUCTmove = calculateHighestUCT(potentialMoves, totalMoves);
-
-            while (simulator.getGameOver()==GameOverState.Active){
-
-                if (firstMove) {
-                    highestUCTmove.setnNodeMoves(highestUCTmove.getnNodeMoves()+1);
-                    simulator.updateGame(highestUCTmove.getPotentialMove());
-                    firstMove = false;
-                }
-                else
-                {
+                while (simulator.getGameOver() == GameOverState.Active) {
                     simulator.updateGame(randomMovePlayer);
+
+                    // Opponent plays randomly
+                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
+                        moves = gs.getField().getAvailableMoves();
+                        IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
+                        simulator.updateGame(randomMoveOpponent);
+                    }
+                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
+                        moves = gs.getField().getAvailableMoves();
+                        randomMovePlayer = moves.get(rand.nextInt(moves.size()));
+                    }
                 }
 
-                // Opponent plays randomly
-                if (simulator.getGameOver()==GameOverState.Active){ // game still going
-                    moves = gs.getField().getAvailableMoves();
-                    IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
-                    simulator.updateGame(randomMoveOpponent);
+                if (simulator.getGameOver() == GameOverState.Win) {
+                    if (simulator.currentPlayer != usPlayer) {
+                        potentialMoves[index].value++;
+                    }
                 }
-                if (simulator.getGameOver()==GameOverState.Active){ // game still going
-                    moves = gs.getField().getAvailableMoves();
-                    randomMovePlayer = moves.get(rand.nextInt(moves.size()));
-                }
-
-            }
-
-            if (simulator.getGameOver()==GameOverState.Win) {
-                if (simulator.currentPlayer != currentPlayer) {
-                    highestUCTmove.setnTotalWins(highestUCTmove.getnTotalWins()+1);
-                }
-                totalMoves++;
-            }
         }
-        double mostNodeVisits = 0;
-        IMove returnedMove = null;
-        for(PotentialMove potentialMove: potentialMoves)
-        {
-            double nMoves = potentialMove.getnNodeMoves();
-            if(nMoves > mostNodeVisits)
-            {
-                mostNodeVisits = nMoves;
-                returnedMove = potentialMove.getPotentialMove();
-            }
-        }
-        return returnedMove;
-// just play randomly if solution not found
     }
+    // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
+
 
     /*
         The code below is a simulator for simulation of gameplay. This is needed for AI.
@@ -184,8 +161,6 @@ public class ExampleSneakyBot implements IBot{
         public int hashCode() {
             return Objects.hash(x, y);
         }
-
-
     }
 
     class GameSimulator {
@@ -356,41 +331,36 @@ public class ExampleSneakyBot implements IBot{
         }
     }
 
-    class PotentialMove
-    {
-        double nNodeMoves;
-        double nTotalWins;
-        IMove potentialMove;
 
-        public PotentialMove(IMove potentialMove, double nNodeMoves, double nTotalWins)
-        {
-            this.potentialMove = potentialMove;
-            this.nTotalWins = nTotalWins;
-            this.nNodeMoves = nNodeMoves;
+    class MySpicyRunnable implements Runnable {
+        final int moveTimeMs;
+        IGameState gameState;
+        PotentialMove[] potentialMoves;
+
+        public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
+            this.gameState = state;
+            this.potentialMoves = potentialMoves;
+            this.moveTimeMs = state.getTimePerMove();
         }
 
-        public double getnNodeMoves() {
-            return nNodeMoves;
+        @Override
+        public void run() {
+            //System.out.println("new Thread");
+            calculateWinningMove(gameState, moveTimeMs, potentialMoves);
         }
-
-        public void setnNodeMoves(double nNodeMoves) {
-            this.nNodeMoves = nNodeMoves;
-        }
-
-        public IMove getPotentialMove() {
-            return potentialMove;
-        }
-
-        public double getnTotalWins() {
-            return nTotalWins;
-        }
-
-        public void setnTotalWins(double nTotalWins) {
-            this.nTotalWins = nTotalWins;
-        }
-
     }
 
+    class PotentialMove
+    {
+        IMove move;
+        int value;
 
+        public PotentialMove(IMove move, int value)
+        {
+            this.move = move;
+            this.value = value;
+        }
+    }
 
 }
+
