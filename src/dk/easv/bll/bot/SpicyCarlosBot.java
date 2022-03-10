@@ -12,6 +12,11 @@ public class SpicyCarlosBot implements IBot{
     private String BOT_NAME = getClass().getSimpleName();
     private double totalMoves = 0;
 
+    public void clearTotalMoves()
+    {
+        totalMoves = 0;
+    }
+
     public double getTotalMoves() {
         return totalMoves;
     }
@@ -32,6 +37,11 @@ public class SpicyCarlosBot implements IBot{
         for(int i = 0; i < potentialMoves.length; i++)
         {
             potentialMoves[i] = new PotentialMove(moves.get(i), 0, 0);
+        }
+
+        if(state.getMoveNumber()==0)
+        {
+            return new Move(4,4);
         }
 
         MySpicyRunnable runnable1 = new MySpicyRunnable(state, potentialMoves);
@@ -60,7 +70,8 @@ public class SpicyCarlosBot implements IBot{
                 bestMove = potMove.move;
             }
         }
-        return bestMove;
+        clearTotalMoves();
+            return bestMove;
     }
 
     @Override
@@ -341,7 +352,7 @@ public class SpicyCarlosBot implements IBot{
                     highestUCTmove = potMove;
                 }
             }
-            return highestUCTmove;
+                return highestUCTmove;
         }
 
         // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
