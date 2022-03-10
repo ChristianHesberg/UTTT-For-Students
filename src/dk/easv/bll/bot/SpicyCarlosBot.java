@@ -70,8 +70,13 @@ public class SpicyCarlosBot implements IBot{
                 bestMove = potMove.move;
             }
         }
+        if(bestMove==null) {
+            Random random = new Random();
+            bestMove= state.getField().getAvailableMoves().get(random.nextInt(state.getField().getAvailableMoves().size()));
+        }
         clearTotalMoves();
-            return bestMove;
+
+        return bestMove;
     }
 
     @Override
@@ -315,7 +320,8 @@ public class SpicyCarlosBot implements IBot{
         public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
             this.gameState = state;
             this.moves = potentialMoves;
-            this.moveTimeMs = state.getTimePerMove();
+            // this.moveTimeMs = state.getTimePerMove();
+            this.moveTimeMs = 100;
         }
 
         @Override
@@ -329,7 +335,7 @@ public class SpicyCarlosBot implements IBot{
 
         public void updateUCTWin(PotentialMove move) {
             move.nNodeMoves++;
-            move.nTotalWins++;
+            move.nTotalWins+=3;
             addTotalMove();
         }
 
@@ -337,10 +343,15 @@ public class SpicyCarlosBot implements IBot{
             move.nNodeMoves++;
             addTotalMove();
         }
-
+        public void updateUCTTie(PotentialMove move) {
+            move.nTotalWins++;
+            move.nNodeMoves++;
+            addTotalMove();
+        }
         public PotentialMove calculateHighestUCT(PotentialMove[] potentialMoves) {
             double highestUCTvalue = -1;
             PotentialMove highestUCTmove = null;
+
             for (PotentialMove potMove : potentialMoves) {
                 if (potMove.nNodeMoves == 0) {
                     return potMove;
@@ -352,7 +363,12 @@ public class SpicyCarlosBot implements IBot{
                     highestUCTmove = potMove;
                 }
             }
-                return highestUCTmove;
+            if(highestUCTmove==null) {
+                for (PotentialMove potMove:potentialMoves) {
+                    System.out.println("Move: "+potMove.move+" Uct : "+calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, getTotalMoves())+" Highest :"+highestUCTvalue);
+                }
+            }
+            return highestUCTmove;
         }
 
         // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
@@ -365,15 +381,9 @@ public class SpicyCarlosBot implements IBot{
                 IGameState gs = simulator.getCurrentState();
                 List<IMove> moves;
                 PotentialMove highestUCTmove = calculateHighestUCT(potentialMoves);
+                IMove randomMovePlayer = highestUCTmove.move!=null?highestUCTmove.move:gs.getField().getAvailableMoves().get(rand.nextInt(gs.getField().getAvailableMoves().size()));
+                // IMove randomMovePlayer = highestUCTmove.move;
                 int currentPlayer = simulator.currentPlayer;
-                IMove randomMovePlayer = highestUCTmove.move;
-
-                if(randomMovePlayer==null)
-                {
-                    List<IMove> randomMoves = gs.getField().getAvailableMoves();
-                    randomMovePlayer = randomMoves.get(randomMoves.size());
-                }
-
 
                 while (simulator.getGameOver() == GameOverState.Active) {
                     simulator.updateGame(randomMovePlayer);
@@ -392,6 +402,12 @@ public class SpicyCarlosBot implements IBot{
                 if (simulator.getGameOver() == GameOverState.Win) {
                     if (simulator.currentPlayer != currentPlayer) {
                         updateUCTWin(highestUCTmove);
+                    }
+                    updateUCTLoss(highestUCTmove);
+                }
+                if (simulator.getGameOver() == GameOverState.Tie) {
+                    if (simulator.currentPlayer != currentPlayer) {
+                        updateUCTTie(highestUCTmove);
                     }
                     updateUCTLoss(highestUCTmove);
                 }
