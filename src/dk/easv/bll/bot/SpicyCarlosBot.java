@@ -8,7 +8,6 @@ import dk.easv.bll.move.IMove;
 import java.util.*;
 
 public class SpicyCarlosBot implements IBot{
-    final int moveTimeMs = 1000;
     private String BOT_NAME = getClass().getSimpleName();
     private double totalMoves = 0;
 
@@ -71,7 +70,17 @@ public class SpicyCarlosBot implements IBot{
             }
         }
         clearTotalMoves();
+        if(bestMove !=null)
+        {
             return bestMove;
+        }
+            else
+        {
+            Random r = new Random();
+            List<IMove> randomMoves = state.getField().getAvailableMoves();
+            System.out.println("returning random bestmove");
+            return randomMoves.get(r.nextInt(randomMoves.size()));
+        }
     }
 
     @Override
@@ -339,6 +348,13 @@ public class SpicyCarlosBot implements IBot{
             addTotalMove();
         }
 
+        public void updateUCTTie(PotentialMove move)
+        {
+            move.nNodeMoves++;
+            move.nTotalWins+=0.3;
+            addTotalMove();
+        }
+
         public PotentialMove calculateHighestUCT(PotentialMove[] potentialMoves) {
             double highestUCTvalue = -1;
             PotentialMove highestUCTmove = null;
@@ -369,13 +385,6 @@ public class SpicyCarlosBot implements IBot{
                 int currentPlayer = simulator.currentPlayer;
                 IMove randomMovePlayer = highestUCTmove.move!=null?highestUCTmove.move:gs.getField().getAvailableMoves().get(rand.nextInt(gs.getField().getAvailableMoves().size()));
 
-                if(randomMovePlayer==null)
-                {
-                    List<IMove> randomMoves = gs.getField().getAvailableMoves();
-                    randomMovePlayer = randomMoves.get(randomMoves.size());
-                }
-
-
                 while (simulator.getGameOver() == GameOverState.Active) {
                     simulator.updateGame(randomMovePlayer);
 
@@ -398,7 +407,7 @@ public class SpicyCarlosBot implements IBot{
                 }
                 if(simulator.getGameOver() == GameOverState.Tie)
                 {
-                    updateUCTLoss(highestUCTmove);
+                    updateUCTTie(highestUCTmove);
                 }
             }
         }
