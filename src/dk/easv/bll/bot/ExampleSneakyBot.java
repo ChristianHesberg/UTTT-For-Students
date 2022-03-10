@@ -72,7 +72,6 @@ public class ExampleSneakyBot implements IBot{
             List<IMove> moves = gs.getField().getAvailableMoves();
             IMove randomMovePlayer = moves.get(rand.nextInt(moves.size()));
             int currentPlayer = simulator.currentPlayer;
-            System.out.println(currentPlayer);
             PotentialMove highestUCTmove;
             boolean firstMove = true;
 
@@ -121,7 +120,6 @@ public class ExampleSneakyBot implements IBot{
                 returnedMove = potentialMove.getPotentialMove();
             }
         }
-        System.out.println(totalMoves);
         return returnedMove;
 // just play randomly if solution not found
     }

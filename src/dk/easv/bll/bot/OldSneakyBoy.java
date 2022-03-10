@@ -44,7 +44,6 @@ public class OldSneakyBoy implements IBot{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
         return mushMaps(runnable1.getHashMap(), runnable2.getHashMap(), runnable3.getHashMap());
     }
 
