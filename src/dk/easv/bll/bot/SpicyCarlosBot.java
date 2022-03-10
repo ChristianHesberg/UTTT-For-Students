@@ -315,7 +315,8 @@ public class SpicyCarlosBot implements IBot{
         public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
             this.gameState = state;
             this.moves = potentialMoves;
-            this.moveTimeMs = state.getTimePerMove();
+            //this.moveTimeMs = state.getTimePerMove();
+            this.moveTimeMs = 100;
         }
 
         @Override
@@ -393,6 +394,10 @@ public class SpicyCarlosBot implements IBot{
                     if (simulator.currentPlayer != currentPlayer) {
                         updateUCTWin(highestUCTmove);
                     }
+                    updateUCTLoss(highestUCTmove);
+                }
+                if(simulator.getGameOver() == GameOverState.Tie)
+                {
                     updateUCTLoss(highestUCTmove);
                 }
             }

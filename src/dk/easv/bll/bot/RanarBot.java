@@ -7,11 +7,16 @@ import dk.easv.bll.move.IMove;
 
 import java.util.*;
 
-public class ShotgunBot implements IBot {
-    //final int moveTimeMs = 1000;
-    private String BOT_NAME = getClass().getSimpleName();
+public class RanarBot implements IBot{
+    private static final int WIN_SCORE = 10;
+    private static final int TIE_SCORE = 3;
+    private static final int LOSS_SCORE = -10;
+    final int moveTimeMs = 100;
+    private String BOT_NAME = "Renar's bot";
 
-    GameSimulator createSimulator(IGameState state) {
+    Random rand = new Random();
+
+    private GameSimulator createSimulator(IGameState state) {
         GameSimulator simulator = new GameSimulator(new GameState());
         simulator.setGameOver(GameOverState.Active);
         simulator.setCurrentPlayer(state.getMoveNumber() % 2);
@@ -22,111 +27,61 @@ public class ShotgunBot implements IBot {
         return simulator;
     }
 
-
     @Override
     public IMove doMove(IGameState state) {
-        int highestValue = 0;
-        IMove bestMove = null;
-        List<IMove> moves = state.getField().getAvailableMoves();
-        PotentialMove[] potentialMoves = new PotentialMove[moves.size()];
+        return calculateWinningMove(state, moveTimeMs);
+    }
 
-        for(int i = 0; i < potentialMoves.length; i++)
-        {
-            potentialMoves[i] = new PotentialMove(moves.get(i), 0);
-        }
-
-        if(state.getMoveNumber()==0)
-        {
-            return new Move(4,4);
-        }
-
-        MySpicyRunnable runnable1 = new MySpicyRunnable(state, potentialMoves);
-        MySpicyRunnable runnable2 = new MySpicyRunnable(state, potentialMoves);
-        MySpicyRunnable runnable3 = new MySpicyRunnable(state, potentialMoves);
-
-        Thread thread1 = new Thread(runnable1);
-        Thread thread2 = new Thread(runnable2);
-        Thread thread3 = new Thread(runnable3);
-
-        thread1.start();
-        thread2.start();
-        thread3.start();
-        try {
-            thread1.join();
-            thread2.join();
-            thread3.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        for(PotentialMove potMove : potentialMoves)
-        {
-            if(potMove.value> highestValue)
-            {
-                highestValue = potMove.value;
-                bestMove = potMove.move;
+    //Plays equal amount of random games for each available move, returns the one the provides most win %
+    private IMove calculateWinningMove(IGameState state, int maxTimeMs){
+        long startTime = System.currentTimeMillis();
+        Node rootNode = new Node(state);
+        rootNode.expand();//For each possible move from rootNode create a new child node
+        List<Node> childrenList = rootNode.getChildren();
+        while (System.currentTimeMillis() < startTime + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
+            for (Node node : childrenList) {
+                playOutRandomly_IncrementAccordingly(node,rootNode);
             }
         }
+        Node bestNode = rootNode.getBestNode();
+        IMove bestMove = bestNode.getMoveFromRoot();
         return bestMove;
     }
 
-    public void calculateWinningMove(IGameState state, int maxTimeMs, PotentialMove[] potentialMoves) {
-        long time = System.currentTimeMillis();
-        Random rand = new Random();
+    private void playOutRandomly_IncrementAccordingly(Node node, Node rootNode) {
+        GameSimulator gs = createSimulator(rootNode.getState());
+        IMove randomMovePlayer = node.getMoveFromRoot();
+        boolean win = false;
 
-        while (System.currentTimeMillis() < time + maxTimeMs) { // check how much time has passed, stop if over maxTimeMs
-            GameSimulator simulator = createSimulator(state);
-            IGameState gs = simulator.getCurrentState();
-            List<IMove> moves;
-            int usPlayer = simulator.currentPlayer;
-            int index = rand.nextInt(potentialMoves.length);
-            IMove randomMovePlayer = potentialMoves[index].move;
+        while (gs.getGameOver()==GameOverState.Active){ // Game not ended
+            List<IMove> moves = gs.getCurrentState().getField().getAvailableMoves();
+            gs.updateGame(randomMovePlayer);
+            win = true;
 
-                while (simulator.getGameOver() == GameOverState.Active) {
-                    simulator.updateGame(randomMovePlayer);
-
-                    // Opponent plays randomly
-                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
-                        moves = gs.getField().getAvailableMoves();
-                        IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
-                        simulator.updateGame(randomMoveOpponent);
-                    }
-                    if (simulator.getGameOver() == GameOverState.Active) { // game still going
-                        moves = gs.getField().getAvailableMoves();
-                        randomMovePlayer = moves.get(rand.nextInt(moves.size()));
-                    }
-                }
-
-                if (simulator.getGameOver() == GameOverState.Win) {
-                    if (simulator.currentPlayer != usPlayer) {
-                        potentialMoves[index].value+=10;
-                    }
-                    /*if(simulator.currentPlayer == usPlayer)
-                    {
-                        potentialMoves[index].value-=10;
-                    }
-
-                     */
-                }
-                if(simulator.getGameOver() == GameOverState.Tie)
-                {
-                    potentialMoves[index].value+=3;
-                }
+            // Opponent plays randomly
+            if (gs.getGameOver()==GameOverState.Active){ // game still going
+                moves = gs.getCurrentState().getField().getAvailableMoves();
+                IMove randomMoveOpponent = moves.get(rand.nextInt(moves.size()));
+                gs.updateGame(randomMoveOpponent);
+                win = false;
+            }
+            if (gs.getGameOver()==GameOverState.Active){ // game still going
+                moves = gs.getCurrentState().getField().getAvailableMoves();
+                randomMovePlayer = moves.get(rand.nextInt(moves.size()));
+            }
         }
+
+        if (gs.getGameOver()==GameOverState.Win && win){
+            node.addScore(WIN_SCORE);
+        }
+        if(gs.getGameOver()==GameOverState.Tie){
+            node.addScore(TIE_SCORE);
+        }
+        if(gs.getGameOver()==GameOverState.Win && !win){
+            node.addScore(LOSS_SCORE);
+        }
+        node.incrementVisits(1);
     }
-    // Plays single games until it wins and returns the first move for that. If iterations reached with no clear win, just return random valid move
-
-
-    /*
-        The code below is a simulator for simulation of gameplay. This is needed for AI.
-
-        It is put here to make the Bot independent of the GameManager and its subclasses/enums
-
-        Now this class is only dependent on a few interfaces: IMove, IField, and IGameState
-
-        You could say it is self-contained. The drawback is that if the game rules change, the simulator must be
-        changed accordingly, making the code redundant.
-
-     */
 
 
     @Override
@@ -346,37 +301,102 @@ public class ShotgunBot implements IBot {
         }
     }
 
+    class Node{
+        private List<Node> children;
+        private double winScore = 0;
+        private int visitCount = 0;
+        private IGameState state;
 
-    class MySpicyRunnable implements Runnable {
-        final int moveTimeMs;
-        IGameState gameState;
-        PotentialMove[] potentialMoves;
-
-        public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
-            this.gameState = state;
-            this.potentialMoves = potentialMoves;
-            this.moveTimeMs = 100;
-            //this.moveTimeMs = state.getTimePerMove();
+        public IMove getMoveFromRoot() {
+            return moveFromRoot;
         }
 
-        @Override
-        public void run() {
-            //System.out.println("new Thread");
-            calculateWinningMove(gameState, moveTimeMs, potentialMoves);
+        public void setMoveFromRoot(IMove moveFromRoot) {
+            this.moveFromRoot = moveFromRoot;
         }
+
+        private IMove moveFromRoot;
+
+        public Node(IGameState state){
+            children = new ArrayList<>();
+            this.state = state;
+
+            String[][] board = Arrays.stream(state.getField().getBoard()).map(String[]::clone).toArray(String[][]::new);
+            String[][] macroBoard = Arrays.stream(state.getField().getMacroboard()).map(String[]::clone).toArray(String[][]::new);
+            this.state.getField().setBoard(board);
+            this.state.getField().setMacroboard(macroBoard);
+        }
+
+
+        public IGameState getState() {
+            return state;
+        }
+
+        public void setState(IGameState currentState) {
+            this.state = currentState;
+        }
+
+
+        public void incrementVisits(int i) {
+            visitCount+=i;
+        }
+
+        public void addScore(int winScore) {
+            this.winScore+=winScore;
+            /*if (parentNode!=null){
+                parentNode.incrementVisits(1);
+                parentNode.addScore(winScore);
+            }
+
+             */
+        }
+
+        public Node getBestNode() {
+            return Collections.max(this.children, Comparator.comparing(c -> c.getWinProbability()));
+        }
+
+        private double getWinScore() {
+            return winScore;
+        }
+
+        private double getWinProbability(){
+            return ((double) (winScore / ((double) visitCount)));
+        }
+
+        private int getVisitCount() {
+            return visitCount;
+        }
+
+        public List<Node> getChildren() {
+            return children;
+        }
+
+        public void expand() {
+            IGameState currentState = this.state;
+            List<IMove> availableMoves = this.getState().getField().getAvailableMoves();
+            for (IMove availableMove : availableMoves) {
+                Node node = new Node(state);
+                children.add(node);
+                node.setMoveFromRoot(availableMove);
+
+                GameSimulator gs = createSimulator(currentState);
+                gs.updateGame(availableMove);
+                node.setState(gs.getCurrentState());
+            }
+        }
+
     }
 
-    class PotentialMove
-    {
-        IMove move;
-        int value;
+    class Tree{
+        private Node rootNode;
 
-        public PotentialMove(IMove move, int value)
-        {
-            this.move = move;
-            this.value = value;
+        public Tree(IGameState state){
+            rootNode = new Node(state);
+        }
+
+        public Node getRootNode() {
+            return rootNode;
         }
     }
 
 }
-
