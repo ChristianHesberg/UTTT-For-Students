@@ -7,7 +7,7 @@ import dk.easv.bll.move.IMove;
 
 import java.util.*;
 
-public class SpicyCarlosBot implements IBot{
+public class JayAndSilentBot implements IBot{
     private String BOT_NAME = getClass().getSimpleName();
     private double totalMoves = 0;
 
