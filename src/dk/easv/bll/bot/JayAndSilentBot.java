@@ -90,7 +90,6 @@ public class JayAndSilentBot implements IBot{
             bestMove= state.getField().getAvailableMoves().get(random.nextInt(state.getField().getAvailableMoves().size()));
         }
         clearTotalMoves();
-
         return bestMove;
     }
 
@@ -358,7 +357,7 @@ public class JayAndSilentBot implements IBot{
             addTotalMove();
         }
         public void updateUCTTie(PotentialMove move) {
-            move.nTotalWins+=0.3;
+            move.nTotalWins+=0.33;
             move.nNodeMoves++;
             addTotalMove();
         }
