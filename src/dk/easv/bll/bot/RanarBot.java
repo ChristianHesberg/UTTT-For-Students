@@ -11,7 +11,7 @@ public class RanarBot implements IBot{
     private static final int WIN_SCORE = 10;
     private static final int TIE_SCORE = 3;
     private static final int LOSS_SCORE = -10;
-    final int moveTimeMs = 100;
+    final int moveTimeMs = 1000;
     private String BOT_NAME = "Renar's bot";
 
     Random rand = new Random();
