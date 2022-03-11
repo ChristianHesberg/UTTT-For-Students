@@ -7,8 +7,7 @@ import dk.easv.bll.move.IMove;
 
 import java.util.*;
 
-public class SpicyCarlosBot implements IBot{
-    final int moveTimeMs = 1000;
+public class JayAndSilentBot implements IBot{
     private String BOT_NAME = getClass().getSimpleName();
     private double totalMoves = 0;
 
@@ -47,18 +46,34 @@ public class SpicyCarlosBot implements IBot{
         MySpicyRunnable runnable1 = new MySpicyRunnable(state, potentialMoves);
         MySpicyRunnable runnable2 = new MySpicyRunnable(state, potentialMoves);
         MySpicyRunnable runnable3 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable4 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable5 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable6 = new MySpicyRunnable(state, potentialMoves);
+        MySpicyRunnable runnable7 = new MySpicyRunnable(state, potentialMoves);
 
         Thread thread1 = new Thread(runnable1);
         Thread thread2 = new Thread(runnable2);
         Thread thread3 = new Thread(runnable3);
+        Thread thread4 = new Thread(runnable4);
+        Thread thread5 = new Thread(runnable5);
+        Thread thread6 = new Thread(runnable6);
+        Thread thread7 = new Thread(runnable7);
 
         thread1.start();
         thread2.start();
         thread3.start();
+        thread4.start();
+        thread5.start();
+        thread6.start();
+        thread7.start();
         try {
             thread1.join();
             thread2.join();
             thread3.join();
+            thread4.join();
+            thread5.join();
+            thread6.join();
+            thread7.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -320,8 +335,7 @@ public class SpicyCarlosBot implements IBot{
         public MySpicyRunnable(IGameState state, PotentialMove[] potentialMoves) {
             this.gameState = state;
             this.moves = potentialMoves;
-            // this.moveTimeMs = state.getTimePerMove();
-            this.moveTimeMs = 100;
+            this.moveTimeMs = state.getTimePerMove();
         }
 
         @Override
@@ -335,7 +349,7 @@ public class SpicyCarlosBot implements IBot{
 
         public void updateUCTWin(PotentialMove move) {
             move.nNodeMoves++;
-            move.nTotalWins+=3;
+            move.nTotalWins++;
             addTotalMove();
         }
 
@@ -344,7 +358,7 @@ public class SpicyCarlosBot implements IBot{
             addTotalMove();
         }
         public void updateUCTTie(PotentialMove move) {
-            move.nTotalWins++;
+            move.nTotalWins+=0.3;
             move.nNodeMoves++;
             addTotalMove();
         }
@@ -363,11 +377,6 @@ public class SpicyCarlosBot implements IBot{
                     highestUCTmove = potMove;
                 }
             }
-            if(highestUCTmove==null) {
-                for (PotentialMove potMove:potentialMoves) {
-                    System.out.println("Move: "+potMove.move+" Uct : "+calculateUCT(potMove.nNodeMoves, potMove.nTotalWins, getTotalMoves())+" Highest :"+highestUCTvalue);
-                }
-            }
             return highestUCTmove;
         }
 
@@ -381,8 +390,12 @@ public class SpicyCarlosBot implements IBot{
                 IGameState gs = simulator.getCurrentState();
                 List<IMove> moves;
                 PotentialMove highestUCTmove = calculateHighestUCT(potentialMoves);
-                IMove randomMovePlayer = highestUCTmove.move!=null?highestUCTmove.move:gs.getField().getAvailableMoves().get(rand.nextInt(gs.getField().getAvailableMoves().size()));
-                // IMove randomMovePlayer = highestUCTmove.move;
+                IMove randomMovePlayer=null;
+                if(highestUCTmove==null){
+                    randomMovePlayer = gs.getField().getAvailableMoves().get(rand.nextInt(gs.getField().getAvailableMoves().size()));
+                }else {
+                    randomMovePlayer = highestUCTmove.move;
+                }
                 int currentPlayer = simulator.currentPlayer;
 
                 while (simulator.getGameOver() == GameOverState.Active) {
@@ -409,7 +422,7 @@ public class SpicyCarlosBot implements IBot{
                     if (simulator.currentPlayer != currentPlayer) {
                         updateUCTTie(highestUCTmove);
                     }
-                    updateUCTLoss(highestUCTmove);
+
                 }
             }
         }
